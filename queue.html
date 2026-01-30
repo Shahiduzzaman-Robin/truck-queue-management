@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck Queue Display</title>
+    <style>
+        @font-face {
+            font-family: 'Kalpurush';
+            src: url('kalpurush.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 32px 36px;
+            margin-bottom: 32px;
+            text-align: center;
+            position: relative;
+        }
+
+        .lang-toggle {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lang-toggle:hover {
+            background: #e8e8e8;
+            border-color: #d0d0d0;
+            transform: translateY(-1px);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s ease;
+        }
+
+        .back-btn:hover {
+            color: #1a1a1a;
+        }
+
+        .bangla {
+            font-family: 'Kalpurush', sans-serif;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .section-title {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 16px 24px;
+            margin-bottom: 16px;
+        }
+
+        .section-title h3 {
+            font-size: 1.1rem;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .current-truck {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 28px 32px;
+            margin-bottom: 40px;
+        }
+
+        .serial-badge {
+            display: inline-block;
+            background: #1a1a1a;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .truck-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .detail-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 1.05rem;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .truck-card {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 24px 28px;
+            margin-bottom: 16px;
+        }
+
+        .truck-card .serial-badge {
+            font-size: 0.95rem;
+            padding: 6px 14px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .footer a {
+            color: #999;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 24px 20px;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .current-truck,
+            .truck-card {
+                padding: 20px 18px;
+            }
+
+            .truck-details {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .lang-toggle {
+                position: static;
+                margin: 12px auto 0;
+                width: fit-content;
+            }
+        }
+    </style>
+    </style>
+    <link rel="stylesheet" href="assets/css/custom-dropdown.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="index.html" class="back-btn" id="backBtn">← Select Warehouse</a>
+            <button class="lang-toggle" onclick="toggleLanguage()">
+                <span id="langFlag">🇧🇩</span>
+                <span id="langText">বাংলা</span>
+            </button>
+            <h1 id="pageTitle">🚛 Truck Queue Display</h1>
+            <p id="subtitle">Real-time unloading status</p>
+            <p id="refreshText" style="font-size: 0.85rem; color: #999; margin-top: 8px;">Auto-refreshing every 10
+                seconds</p>
+        </div>
+
+        <!-- Currently Unloading -->
+        <div id="currentTruckContainer">
+            <!-- Rendered by JavaScript -->
+        </div>
+
+        <!-- Next in Queue -->
+        <div style="margin-top: 40px;">
+            <div class="section-title">
+                <h3>📋 Next in Queue</h3>
+            </div>
+            <div id="upcomingQueueContainer">
+                <!-- Rendered by JavaScript -->
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="admin/login.html">Admin Login</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let serverTimeOffset = 0; // Difference between client and server time in ms
+        let currentTrucks = [];
+        let currentLang = 'en'; // Default language
+
+        // Get warehouse ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const warehouseId = urlParams.get('warehouse');
+        let currentWarehouse = null;
+
+        // Translation object
+        const translations = {
+            en: {
+                // ... existing translations ...
+                pageTitle: '🚛 Truck Queue Display',
+                subtitle: 'Real-time unloading status',
+                // ...
+                backToSelection: '← Select Warehouse',
+                warehouseStart: 'Warehouse:',
+                refreshText: 'Auto-refreshing every 10 seconds',
+                currentlyLoading: '🔄 Currently Loading',
+                nextInQueue: '📋 Next in Queue',
+                serial: 'Serial',
+                loadingTime: '⏱️ Loading Time',
+                waitingTime: '⏳ Waiting Time',
+                started: 'Started',
+                entry: 'Entry',
+                licence: '🚚 Licence Number',
+                driver: '👤 Driver',
+                phone: '📞 Phone',
+                buyer: '🏢 Buyer',
+                destination: '📍 Destination',
+                salesManager: '💼 Sales Manager',
+                licenceShort: 'Licence',
+                driverShort: 'Driver',
+                phoneShort: 'Phone',
+                buyerShort: 'Buyer',
+                destinationShort: 'Destination',
+                salesManagerShort: 'Sales Manager',
+                noTrucks: 'No trucks in queue',
+                noCurrentTruck: 'No truck currently being loaded',
+                noUpcoming: 'No upcoming trucks',
+                adminLogin: 'Admin Login',
+                langFlag: '🇧🇩',
+                langText: 'বাংলা'
+            },
+            bn: {
+                // ... existing translations ...
+                pageTitle: '🚛 ট্রাক সারি প্রদর্শন',
+                subtitle: 'রিয়েল-টাইম আনলোডিং স্ট্যাটাস',
+                // ...
+                backToSelection: '← ওয়্যারহাউস নির্বাচন',
+                warehouseStart: 'ওয়্যারহাউস:',
+                refreshText: 'প্রতি ১০ সেকেন্ডে স্বয়ংক্রিয়ভাবে রিফ্রেশ হচ্ছে',
+                currentlyLoading: '🔄 বর্তমানে লোডিং',
+                nextInQueue: '📋 সারিতে পরবর্তী',
+                serial: 'সিরিয়াল',
+                loadingTime: '⏱️ লোডিং সময়',
+                waitingTime: '⏳ অপেক্ষার সময়',
+                started: 'শুরু',
+                entry: 'প্রবেশ',
+                licence: '🚚 লাইসেন্স নম্বর',
+                driver: '👤 চালক',
+                phone: '📞 ফোন',
+                buyer: '🏢 ক্রেতা',
+                destination: '📍 গন্তব্য',
+                salesManager: '💼 সেলস ম্যানেজার',
+                licenceShort: 'লাইসেন্স',
+                driverShort: 'চালক',
+                phoneShort: 'ফোন',
+                buyerShort: 'ক্রেতা',
+                destinationShort: 'গন্তব্য',
+                salesManagerShort: 'সেলস ম্যানেজার',
+                noTrucks: 'সারিতে কোনো ট্রাক নেই',
+                noCurrentTruck: 'বর্তমানে কোনো ট্রাক লোড হচ্ছে না',
+                noUpcoming: 'আসন্ন কোনো ট্রাক নেই',
+                adminLogin: 'অ্যাডমিন লগইন',
+                langFlag: '🇬🇧',
+                langText: 'English'
+            }
+        };
+
+        const warehouseTranslations = {
+            'Kamrul Agro Food Industries 1': { bn: 'কামরুল এগ্রো ফুড ইন্ডাস্ট্রিজ ১' },
+            'Kamrul Agro Food Industries 2': { bn: 'কামরুল এগ্রো ফুড ইন্ডাস্ট্রিজ ২' },
+            'Awlad Agro Food Industries': { bn: 'আওলাদ এগ্রো ফুড ইন্ডাস্ট্রিজ' },
+            'MB Agro Food': { bn: 'এমবি এগ্রো ফুড' }
+        };
+
+        // ... existing toggle/update language functions ...
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'bn' : 'en';
+            localStorage.setItem('preferredLanguage', currentLang);
+            updateLanguage();
+            displayQueue(currentTrucks); // Re-render with new language
+        }
+
+        function updateLanguage() {
+            const t = translations[currentLang];
+            const isBangla = currentLang === 'bn';
+
+            // Update header elements
+            document.getElementById('pageTitle').textContent = t.pageTitle;
+
+            // Subtitle now shows warehouse name + status if loaded
+            if (currentWarehouse) {
+                const whPrefix = isBangla ? 'ওয়্যারহাউস: ' : 'Warehouse: ';
+                const displayName = (isBangla && warehouseTranslations[currentWarehouse.name])
+                    ? warehouseTranslations[currentWarehouse.name].bn
+                    : currentWarehouse.name;
+
+                const subtitleEl = document.getElementById('subtitle');
+                subtitleEl.textContent = whPrefix + displayName;
+                // Add bangla class if it's Bangla
+                if (isBangla) {
+                    subtitleEl.classList.add('bangla');
+                } else {
+                    subtitleEl.classList.remove('bangla');
+                }
+            } else {
+                document.getElementById('subtitle').textContent = t.subtitle;
+            }
+
+            document.getElementById('refreshText').textContent = t.refreshText;
+            document.getElementById('langFlag').textContent = t.langFlag;
+            document.getElementById('langText').textContent = t.langText;
+
+            // Update back button
+            const backBtn = document.getElementById('backBtn');
+            if (backBtn) {
+                backBtn.textContent = t.backToSelection;
+                backBtn.className = isBangla ? 'back-btn bangla' : 'back-btn';
+            }
+
+            // Update section titles
+            const currentLoadingTitle = document.querySelector('.section-title h3');
+            if (currentLoadingTitle) {
+                currentLoadingTitle.textContent = t.currentlyLoading;
+                currentLoadingTitle.className = isBangla ? 'bangla' : '';
+            }
+
+            // Update next queue title
+            const nextQueueTitle = document.querySelectorAll('.section-title h3')[1];
+            if (nextQueueTitle) {
+                nextQueueTitle.textContent = t.nextInQueue;
+                nextQueueTitle.className = isBangla ? 'bangla' : '';
+            }
+
+            // Apply/remove Bangla class to body
+            if (isBangla) {
+                document.body.classList.add('bangla');
+            } else {
+                document.body.classList.remove('bangla');
+            }
+        }
+
+        // Load specific warehouse details
+        async function loadWarehouseDetails() {
+            if (!warehouseId) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/warehouses/${warehouseId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentWarehouse = data.warehouse;
+                    updateLanguage(); // Update header with warehouse name
+                } else {
+                    alert('Warehouse not found');
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                console.error('Error loading warehouse:', error);
+            }
+        }
+
+        // ... existing time/formatting functions ...
+        function loadLanguagePreference() {
+            const savedLang = localStorage.getItem('preferredLanguage');
+            if (savedLang && (savedLang === 'en' || savedLang === 'bn')) {
+                currentLang = savedLang;
+            }
+            // Logic handled in updateLanguage now
+        }
+
+        async function syncServerTime() {
+            try {
+                const clientTime = Date.now();
+                const response = await fetch(`${API_BASE}/trucks/time`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const serverTime = new Date(data.server_time).getTime();
+                    serverTimeOffset = serverTime - clientTime;
+                }
+            } catch (error) {
+                console.error('Error syncing server time:', error);
+            }
+        }
+
+        function getCurrentBDT() {
+            return new Date(Date.now() + serverTimeOffset);
+        }
+
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            const isBangla = currentLang === 'bn';
+            const num = (n) => isBangla ? n.toLocaleString('bn-BD') : n;
+
+            if (days > 0) {
+                if (isBangla) return `${num(days)} দিন ${num(hours % 24)} ঘণ্টা ${num(minutes % 60)} মিনিট`;
+                return `${days}d ${hours % 24}h ${minutes % 60}m`;
+            } else if (hours > 0) {
+                if (isBangla) return `${num(hours)} ঘণ্টা ${num(minutes % 60)} মিনিট`;
+                return `${hours}h ${minutes % 60}m`;
+            } else if (minutes > 0) {
+                if (isBangla) return `${num(minutes)} মিনিট ${num(seconds % 60)} সেকেন্ড`;
+                return `${minutes}m ${seconds % 60}s`;
+            } else {
+                if (isBangla) return `${num(seconds)} সেকেন্ড`;
+                return `${seconds}s`;
+            }
+        }
+
+        function formatBDTTime(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            const locale = currentLang === 'bn' ? 'bn-BD' : 'en-BD';
+            return date.toLocaleString(locale, {
+                timeZone: 'Asia/Dhaka',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updateTimers() {
+            const now = getCurrentBDT();
+            currentTrucks.forEach(truck => {
+                if (truck.serial_number === 1 && truck.time_loading_started) {
+                    const loadingStartTime = new Date(truck.time_loading_started);
+                    const elapsed = now - loadingStartTime;
+                    const timerElement = document.getElementById(`loading-timer-${truck.id}`);
+                    if (timerElement) {
+                        timerElement.textContent = formatDuration(elapsed);
+                    }
+                } else if (truck.time_of_entry) {
+                    const entryTime = new Date(truck.time_of_entry);
+                    const elapsed = now - entryTime;
+                    const timerElement = document.getElementById(`waiting-timer-${truck.id}`);
+                    if (timerElement) {
+                        timerElement.textContent = formatDuration(elapsed);
+                    }
+                }
+            });
+        }
+
+        // Load and display queue (FILTERED BY WAREHOUSE)
+        async function loadQueue() {
+            if (!warehouseId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/trucks/queue/${warehouseId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentTrucks = data.queue;
+
+                    if (data.server_time) {
+                        const serverTime = new Date(data.server_time).getTime();
+                        serverTimeOffset = serverTime - Date.now();
+                    }
+
+                    displayQueue(currentTrucks);
+                } else {
+                    console.error('Error loading queue:', data.message);
+                    displayError();
+                }
+            } catch (error) {
+                console.error('Error fetching queue:', error);
+                displayError();
+            }
+        }
+
+        function displayQueue(trucks) {
+            const t = translations[currentLang];
+            const currentContainer = document.getElementById('currentTruckContainer');
+            const upcomingContainer = document.getElementById('upcomingQueueContainer');
+
+            if (trucks.length === 0) {
+                currentContainer.innerHTML = `<div class="empty-state ${currentLang === 'bn' ? 'bangla' : ''}">${t.noTrucks}</div>`;
+                upcomingContainer.innerHTML = '';
+                return;
+            }
+
+            // Display first truck (currently loading)
+            const firstTruck = trucks.find(t => t.serial_number === 1);
+            if (firstTruck) {
+                const loadingTime = firstTruck.time_loading_started ?
+                    formatDuration(getCurrentBDT() - new Date(firstTruck.time_loading_started)) :
+                    'N/A';
+
+                currentContainer.innerHTML = `
+                    <div class="section-title">
+                        <h3 class="${currentLang === 'bn' ? 'bangla' : ''}">${t.currentlyLoading}</h3>
+                    </div>
+                    <div class="current-truck">
+                        <div class="serial-badge ${currentLang === 'bn' ? 'bangla' : ''}">${t.serial} #${firstTruck.serial_number}</div>
+                        ${firstTruck.time_loading_started ? `
+                            <div style="text-align: center; margin: 10px 0;">
+                                <div class="${currentLang === 'bn' ? 'bangla' : ''}" style="font-size: 0.9rem; color: #666; margin-bottom: 5px;">${t.loadingTime}</div>
+                                <div id="loading-timer-${firstTruck.id}" class="${currentLang === 'bn' ? 'bangla' : ''}" style="font-size: 1.5rem; font-weight: 700; color: #1a1a1a;">${loadingTime}</div>
+                                <div class="${currentLang === 'bn' ? 'bangla' : ''}" style="font-size: 0.75rem; color: #999; margin-top: 5px;">${t.started}: ${formatBDTTime(firstTruck.time_loading_started)}</div>
+                            </div>
+                        ` : ''}
+                        <div class="truck-details">
+                            <div class="detail-item">
+                                <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.licence}</div>
+                                <div class="detail-value">${firstTruck.licence_number}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.driver}</div>
+                                <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${firstTruck.driver_name}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.phone}</div>
+                                <div class="detail-value">${firstTruck.driver_phone}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.salesManager}</div>
+                                <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${firstTruck.sales_manager || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.buyer}</div>
+                                <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${firstTruck.buyer_name}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.destination}</div>
+                                <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${firstTruck.destination}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                currentContainer.innerHTML = `<div class="empty-state ${currentLang === 'bn' ? 'bangla' : ''}">${t.noCurrentTruck}</div>`;
+            }
+
+            // Display upcoming trucks
+            const upcomingTrucks = trucks.filter(t => t.serial_number > 1);
+            if (upcomingTrucks.length > 0) {
+                upcomingContainer.innerHTML = upcomingTrucks.map(truck => {
+                    const waitingTime = truck.time_of_entry ?
+                        formatDuration(getCurrentBDT() - new Date(truck.time_of_entry)) :
+                        'N/A';
+
+                    return `
+                        <div class="truck-card">
+                            <div class="serial-badge ${currentLang === 'bn' ? 'bangla' : ''}">${t.serial} #${truck.serial_number}</div>
+                            ${truck.time_of_entry ? `
+                                <div style="text-align: center; margin: 10px 0; padding: 8px; background: #fafafa; border-radius: 6px;">
+                                    <div class="${currentLang === 'bn' ? 'bangla' : ''}" style="font-size: 0.85rem; color: #666; margin-bottom: 3px;">${t.waitingTime}</div>
+                                    <div id="waiting-timer-${truck.id}" class="${currentLang === 'bn' ? 'bangla' : ''}" style="font-size: 1.1rem; font-weight: 600; color: #1a1a1a;">${waitingTime}</div>
+                                    <div class="${currentLang === 'bn' ? 'bangla' : ''}" style="font-size: 0.7rem; color: #999; margin-top: 3px;">${t.entry}: ${formatBDTTime(truck.time_of_entry)}</div>
+                                </div>
+                            ` : ''}
+                            <div class="truck-details">
+                                <div class="detail-item">
+                                    <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.licenceShort}</div>
+                                    <div class="detail-value">${truck.licence_number}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.driverShort}</div>
+                                    <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${truck.driver_name}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.phoneShort}</div>
+                                    <div class="detail-value">${truck.driver_phone}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.salesManagerShort}</div>
+                                    <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${truck.sales_manager || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.buyerShort}</div>
+                                    <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${truck.buyer_name}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label ${currentLang === 'bn' ? 'bangla' : ''}">${t.destinationShort}</div>
+                                    <div class="detail-value ${currentLang === 'bn' ? 'bangla' : ''}">${truck.destination}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                upcomingContainer.innerHTML = `<div class="empty-state ${currentLang === 'bn' ? 'bangla' : ''}">${t.noUpcoming}</div>`;
+            }
+
+            // Update "Next in Queue" title
+            const nextQueueTitle = document.querySelector('#upcomingQueueContainer').previousElementSibling.querySelector('h3');
+            if (nextQueueTitle) {
+                nextQueueTitle.textContent = t.nextInQueue;
+                nextQueueTitle.className = currentLang === 'bn' ? 'bangla' : '';
+            }
+        }
+
+        function displayError() {
+            const currentContainer = document.getElementById('currentTruckContainer');
+            currentContainer.innerHTML = '<div class="empty-state" style="color: #dc2626;">Failed to load queue. Please check server connection.</div>';
+        }
+
+        // Initialize
+        async function init() {
+            // Check for warehouse param
+            if (!warehouseId) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            await loadWarehouseDetails(); // Load warehouse name
+            loadLanguagePreference();
+            await syncServerTime();
+            await loadQueue();
+
+            setInterval(updateTimers, 1000);
+            setInterval(loadQueue, 10000);
+        }
+
+        init();
+    </script>
+    <script src="assets/js/custom-dropdown.js"></script>
+</body>
+
+</html>

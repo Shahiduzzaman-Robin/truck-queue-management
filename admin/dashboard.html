@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Truck Queue System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 32px 36px;
+            margin-bottom: 28px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-actions span {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .header-actions strong {
+            color: #1a1a1a;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 28px 32px;
+            margin-bottom: 28px;
+        }
+
+        .card-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .card-header h2 {
+            font-size: 1.3rem;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid #d0d0d0;
+            border-radius: 5px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease;
+            font-family: inherit;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #888;
+        }
+
+        input::placeholder {
+            color: #999;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: 1px solid #d0d0d0;
+            border-radius: 5px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            color: #1a1a1a;
+        }
+
+        .btn-primary {
+            background: #1a1a1a;
+            color: white;
+            border-color: #1a1a1a;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+            border-color: #333;
+        }
+
+        .btn-secondary {
+            background: white;
+            border-color: #d0d0d0;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+            border-color: #b0b0b0;
+        }
+
+        .btn-danger {
+            background: #D2042D;
+            color: white;
+            border: 1px solid #D2042D;
+            transition: all 0.2s ease;
+        }
+
+        .btn-danger:hover {
+            background: #b00325;
+            border-color: #b00325;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+            cursor: pointer;
+        }
+
+        .btn:disabled {
+            background: #f5f5f5;
+            color: #999;
+            border-color: #e5e5e5;
+            cursor: not-allowed;
+        }
+
+        #addMessageBox,
+        #queueMessageBox {
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        #addMessageBox.error,
+        #queueMessageBox.error {
+            display: block;
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        #addMessageBox.success,
+        #queueMessageBox.success {
+            display: block;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .truck-card {
+            padding: 20px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            background: #fafafa;
+        }
+
+        .truck-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .serial-badge {
+            background: #1a1a1a;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .truck-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .detail-item {
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spinner 0.6s linear infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spinner {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 24px 20px;
+            }
+
+            .card {
+                padding: 20px 18px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Custom Dropdown Styling */
+        .custom-select-wrapper {
+            position: relative;
+            user-select: none;
+            width: 100%;
+        }
+
+        .custom-select {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .custom-select__trigger {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 14px;
+            font-size: 0.95rem;
+            color: #333;
+            background: #fff;
+            border: 1px solid #d0d0d0;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        .custom-select.open .custom-select__trigger {
+            border-color: #888;
+        }
+
+        .custom-options {
+            position: absolute;
+            display: block;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border: 1px solid #e5e5e5;
+            background: #fff;
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 8px;
+            border-radius: 8px;
+        }
+
+        .custom-select.open .custom-options {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .custom-option {
+            position: relative;
+            display: block;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            color: #333;
+            cursor: pointer;
+            border-bottom: 1px solid #f9f9f9;
+            transition: background 0.2s;
+        }
+
+        .custom-option:hover {
+            background-color: #f5f5f5;
+        }
+
+        .custom-option.selected {
+            background-color: #f0f9ff;
+            color: #000;
+            font-weight: 500;
+        }
+
+        .btn-success {
+            background: #1a1a1a;
+            color: white;
+            border: 1px solid #1a1a1a;
+            transition: all 0.2s ease;
+        }
+
+        .btn-success:hover {
+            background: #333;
+            border-color: #333;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+            cursor: pointer;
+        }
+
+        #logoutBtn {
+            background-color: #D2042D;
+            color: white;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        #logoutBtn:hover {
+            background-color: #b00325;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚛 Admin Dashboard</h1>
+            <p>Manage truck queue and operations</p>
+            <div class="header-actions">
+                <div id="warehouseSelectorContainer" style="display: none; margin-right: 20px;"><select
+                        id="warehouseSelector"
+                        style="padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9rem;">
+                        <option value="">Select Warehouse...</option>
+                    </select></div><span>Logged in as: <strong id="usernameDisplay">Admin</strong><span
+                        id="userRoleDisplay"
+                        style="font-size: 0.8rem; background: #eee; padding: 2px 6px; border-radius: 4px; margin-left: 5px;"></span></span><button
+                    id="logoutBtn" class="btn btn-secondary">Logout</button>
+            </div>
+        </div>
+        <!-- Add New Truck Form -->
+        <div class="card">
+            <div class="card-header">
+                <h2>➕ Add New Truck</h2>
+            </div>
+            <form id="addTruckForm">
+                <div class="form-grid">
+                    <div class="form-group"><label for="licence_number">Truck Licence Number *</label><input type="text"
+                            id="licence_number" name="licence_number" placeholder="e.g., DHA-1234" required></div>
+                    <div class="form-group"><label for="driver_name">Driver Name *</label><input type="text"
+                            id="driver_name" name="driver_name" placeholder="Enter driver name" required></div>
+                    <div class="form-group"><label for="driver_phone">Driver Phone *</label><input type="tel"
+                            id="driver_phone" name="driver_phone" placeholder="e.g., 01712345678" required></div>
+                    <div class="form-group"><label for="sales_manager">Sales Manager Name *</label><select
+                            id="sales_manager" name="sales_manager" required
+                            style="width: 100%; padding: 11px 14px; border: 1px solid #d0d0d0; border-radius: 5px;">
+                            <option value="">Select Sales Manager...</option>
+                            <option value="Habib Bokssho">Habib Bokssho</option>
+                            <option value="Maino Bokhsho">Maino Bokhsho</option>
+                            <option value="Monir Bokhso">Monir Bokhso</option>
+                            <option value="Nahid Bokhsho">Nahid Bokhsho</option>
+                            <option value="Bashir Bhuiyan">Bashir Bhuiyan</option>
+                        </select></div>
+                    <div class="form-group"><label for="buyer_name">Buyer Name *</label><input type="text"
+                            id="buyer_name" name="buyer_name" placeholder="Enter buyer name" required></div>
+                    <div class="form-group"><label for="destination">Destination *</label><input type="text"
+                            id="destination" name="destination" placeholder="Enter destination" required></div>
+                </div>
+                <div id="addMessageBox"></div><button type="submit" class="btn btn-primary"><span id="addText">Add
+                        Truck to Queue</span><span id="addSpinner" class="loading"
+                        style="display: none;"></span></button>
+            </form>
+        </div>
+        <!-- Current Queue -->
+        <div class="card">
+            <div class="card-header"
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: none; padding-bottom: 0; margin-bottom: 20px;">
+                <h2>📋 Current Queue</h2><button id="refreshBtn" class="btn btn-secondary">🔄 Refresh</button>
+            </div>
+            <div id="queueMessageBox"></div>
+            <div id="queueContainer">
+                <p style="text-align: center; color: #666;">Loading queue...</p>
+            </div>
+        </div>
+    </div>
+    <!-- Manage Admins Section (Super Admin Only) -->
+    <div id="manageAdminsSection" class="card" style="display: none;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>👥 Manage Admins</h2><button class="btn btn-primary" onclick="openAddAdminModal()">➕ Add New
+                Admin</button>
+        </div>
+        <div id="adminMessageBox"></div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                <thead>
+                    <tr style="background: #f5f5f5; text-align: left;">
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Username</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Role</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Assigned
+                            Warehouse</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="adminsTableBody">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Edit Truck Modal -->
+    <div id="editModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 100%; max-width: 500px; margin: 20px; max-height: 90vh; overflow-y: auto;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>✏️ Edit Truck</h2><button onclick="closeEditModal()"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;
+                </button>
+            </div>
+            <form id="editTruckForm"><input type="hidden" id="edit_truck_id">
+                <div class="form-group"><label for="edit_licence_number">Truck Licence Number</label><input type="text"
+                        id="edit_licence_number" required></div>
+                <div class="form-group"><label for="edit_driver_name">Driver Name</label><input type="text"
+                        id="edit_driver_name" required></div>
+                <div class="form-group"><label for="edit_driver_phone">Driver Phone</label><input type="tel"
+                        id="edit_driver_phone" required></div>
+                <div class="form-group"><label for="edit_sales_manager">Sales Manager Name</label><select
+                        id="edit_sales_manager" required
+                        style="width: 100%; padding: 11px 14px; border: 1px solid #d0d0d0; border-radius: 5px;">
+                        <option value="">Select Sales Manager...</option>
+                        <option value="Habib Bokssho">Habib Bokssho</option>
+                        <option value="Maino Bokhsho">Maino Bokhsho</option>
+                        <option value="Monir Bokhso">Monir Bokhso</option>
+                        <option value="Nahid Bokhsho">Nahid Bokhsho</option>
+                        <option value="Bashir Bhuiyan">Bashir Bhuiyan</option>
+                    </select></div>
+                <div class="form-group"><label for="edit_buyer_name">Buyer Name</label><input type="text"
+                        id="edit_buyer_name" required></div>
+                <div class="form-group"><label for="edit_destination">Destination</label><input type="text"
+                        id="edit_destination" required></div>
+                <div id="editMessageBox"></div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;"><button type="button"
+                        onclick="closeEditModal()" class="btn btn-secondary" style="flex: 1;">Cancel</button><button
+                        type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button></div>
+            </form>
+        </div>
+    </div>
+    <!-- Add Admin Modal -->
+    <div id="addAdminModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 100%; max-width: 500px; margin: 20px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>➕ Add New Admin</h2><button onclick="closeAddAdminModal()"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;
+                </button>
+            </div>
+            <form id="addAdminForm">
+                <div class="form-group"><label>Username</label><input type="text" name="username" required>
+                </div>
+                <div class="form-group"><label>Password</label><input type="password" name="password" required></div>
+                <div class="form-group"><label>Role</label><select name="role" id="newAdminRole" class="form-control"
+                        style="width: 100%; padding: 11px 14px; border: 1px solid #d0d0d0; border-radius: 5px;">
+                        <option value="admin">Warehouse Admin</option>
+                        <option value="super_admin">Super Admin</option>
+                    </select></div>
+                <div class="form-group" id="warehouseSelectGroup"><label>Assign Warehouse</label>
+                    <select name="warehouse_id" id="newAdminWarehouse" class="form-control"
+                        style="width: 100%; padding: 11px 14px; border: 1px solid #d0d0d0; border-radius: 5px;">
+                        <option value="">Select Warehouse...</option>
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div id="addAdminMessage"></div><button type="submit" class="btn btn-primary"
+                    style="width: 100%; margin-top: 20px;">Create Admin</button>
+            </form>
+        </div>
+    </div>
+    <!-- Edit Admin Modal -->
+    <div id="editAdminModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 100%; max-width: 500px; margin: 20px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>✏️ Edit Admin</h2><button onclick="closeEditAdminModal()"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;
+                </button>
+            </div>
+            <form id="editAdminForm"><input type="hidden" id="edit_admin_id">
+                <div class="form-group"><label>Username</label><input type="text" id="edit_admin_username" required>
+                </div>
+                <div class="form-group"><label>New Password (leave blank to keep current)</label><input type="password"
+                        id="edit_admin_password" placeholder="New Password"></div>
+                <div class="form-group" id="editWarehouseGroup"><label>Assigned Warehouse</label>
+                    <select id="edit_admin_warehouse"
+                        style="width: 100%; padding: 11px 14px; border: 1px solid #d0d0d0; border-radius: 5px;">
+                        <option value="">Select Warehouse...</option>
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div id="editAdminMessage"></div><button type="submit" class="btn btn-primary"
+                    style="width: 100%; margin-top: 20px;">Update Admin</button>
+            </form>
+        </div>
+    </div>
+    <script src="../assets/js/custom-dropdown.js"></script>
+    <script src="../assets/js/admin.js"></script>
+</body>
+
+
+</html>
