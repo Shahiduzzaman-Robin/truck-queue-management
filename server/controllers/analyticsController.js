@@ -24,12 +24,16 @@ exports.getCompletionStats = async (req, res) => {
 
         const [rows] = await db.query(`
             SELECT 
-                DATE_FORMAT(finished_at, ?) as period,
+                DATE_FORMAT(COALESCE(finished_at, time_of_entry), ?) as period,
                 COUNT(*) as total_trucks,
-                AVG(TIMESTAMPDIFF(MINUTE, time_of_entry, finished_at)) as avg_total_time,
-                AVG(TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at)) as avg_loading_time
+                AVG(TIMESTAMPDIFF(MINUTE, time_of_entry, COALESCE(finished_at, time_of_entry))) as avg_total_time,
+                AVG(CASE 
+                    WHEN time_loading_started IS NOT NULL AND finished_at IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at) 
+                    ELSE NULL 
+                END) as avg_loading_time
             FROM trucks_history
-            WHERE finished_at BETWEEN ? AND ?
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
             GROUP BY period
             ORDER BY period ASC
         `, [dateFormat, start, end]);
@@ -38,10 +42,14 @@ exports.getCompletionStats = async (req, res) => {
         const [overall] = await db.query(`
             SELECT 
                 COUNT(*) as total_trucks,
-                AVG(TIMESTAMPDIFF(MINUTE, time_of_entry, finished_at)) as avg_total_time,
-                AVG(TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at)) as avg_loading_time
+                AVG(TIMESTAMPDIFF(MINUTE, time_of_entry, COALESCE(finished_at, time_of_entry))) as avg_total_time,
+                AVG(CASE 
+                    WHEN time_loading_started IS NOT NULL AND finished_at IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at) 
+                    ELSE NULL 
+                END) as avg_loading_time
             FROM trucks_history
-            WHERE finished_at BETWEEN ? AND ?
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
         `, [start, end]);
 
         res.json({
@@ -70,13 +78,24 @@ exports.getLoadingTimeByWarehouse = async (req, res) => {
                 w.id as warehouse_id,
                 w.name as warehouse_name,
                 COUNT(h.id) as total_trucks,
-                AVG(TIMESTAMPDIFF(MINUTE, h.time_loading_started, h.finished_at)) as avg_loading_time,
-                MIN(TIMESTAMPDIFF(MINUTE, h.time_loading_started, h.finished_at)) as min_loading_time,
-                MAX(TIMESTAMPDIFF(MINUTE, h.time_loading_started, h.finished_at)) as max_loading_time
+                AVG(CASE 
+                    WHEN h.time_loading_started IS NOT NULL AND h.finished_at IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, h.time_loading_started, h.finished_at) 
+                    ELSE NULL 
+                END) as avg_loading_time,
+                MIN(CASE 
+                    WHEN h.time_loading_started IS NOT NULL AND h.finished_at IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, h.time_loading_started, h.finished_at) 
+                    ELSE NULL 
+                END) as min_loading_time,
+                MAX(CASE 
+                    WHEN h.time_loading_started IS NOT NULL AND h.finished_at IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, h.time_loading_started, h.finished_at) 
+                    ELSE NULL 
+                END) as max_loading_time
             FROM warehouses w
             LEFT JOIN trucks_history h ON w.id = h.warehouse_id 
-                AND h.finished_at BETWEEN ? AND ?
-                AND h.time_loading_started IS NOT NULL
+                AND COALESCE(h.finished_at, h.time_of_entry) BETWEEN ? AND ?
             GROUP BY w.id, w.name
             ORDER BY avg_loading_time DESC
         `, [start, end]);
@@ -105,7 +124,7 @@ exports.getPeakHours = async (req, res) => {
                 HOUR(time_of_entry) as hour,
                 COUNT(*) as truck_count
             FROM trucks_history
-            WHERE time_of_entry BETWEEN ? AND ?
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
             GROUP BY hour
             ORDER BY hour ASC
         `, [start, end]);
@@ -146,12 +165,16 @@ exports.getSalesManagerPerformance = async (req, res) => {
             SELECT 
                 COALESCE(sales_manager, 'Not Assigned') as sales_manager,
                 COUNT(*) as total_trucks,
-                AVG(TIMESTAMPDIFF(MINUTE, time_of_entry, finished_at)) as avg_total_time,
-                AVG(TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at)) as avg_loading_time,
-                MIN(TIMESTAMPDIFF(MINUTE, time_of_entry, finished_at)) as min_total_time,
-                MAX(TIMESTAMPDIFF(MINUTE, time_of_entry, finished_at)) as max_total_time
+                AVG(TIMESTAMPDIFF(MINUTE, time_of_entry, COALESCE(finished_at, time_of_entry))) as avg_total_time,
+                AVG(CASE 
+                    WHEN time_loading_started IS NOT NULL AND finished_at IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at) 
+                    ELSE NULL 
+                END) as avg_loading_time,
+                MIN(TIMESTAMPDIFF(MINUTE, time_of_entry, COALESCE(finished_at, time_of_entry))) as min_total_time,
+                MAX(TIMESTAMPDIFF(MINUTE, time_of_entry, COALESCE(finished_at, time_of_entry))) as max_total_time
             FROM trucks_history
-            WHERE finished_at BETWEEN ? AND ?
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
             GROUP BY sales_manager
             ORDER BY total_trucks DESC
         `, [start, end]);
@@ -178,15 +201,19 @@ exports.getDashboardSummary = async (req, res) => {
         // Total trucks completed
         const [totalTrucks] = await db.query(`
             SELECT COUNT(*) as count FROM trucks_history 
-            WHERE finished_at BETWEEN ? AND ?
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
         `, [start, end]);
 
         // Average loading time
         const [avgTime] = await db.query(`
             SELECT 
-                AVG(TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at)) as avg_loading_time
+                AVG(CASE 
+                    WHEN time_loading_started IS NOT NULL AND finished_at IS NOT NULL 
+                    THEN TIMESTAMPDIFF(MINUTE, time_loading_started, finished_at) 
+                    ELSE NULL 
+                END) as avg_loading_time
             FROM trucks_history
-            WHERE finished_at BETWEEN ? AND ? AND time_loading_started IS NOT NULL
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
         `, [start, end]);
 
         // Busiest hour
@@ -195,7 +222,7 @@ exports.getDashboardSummary = async (req, res) => {
                 HOUR(time_of_entry) as hour,
                 COUNT(*) as count
             FROM trucks_history
-            WHERE time_of_entry BETWEEN ? AND ?
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
             GROUP BY hour
             ORDER BY count DESC
             LIMIT 1
@@ -207,7 +234,7 @@ exports.getDashboardSummary = async (req, res) => {
                 sales_manager,
                 COUNT(*) as count
             FROM trucks_history
-            WHERE finished_at BETWEEN ? AND ? AND sales_manager IS NOT NULL
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ? AND sales_manager IS NOT NULL
             GROUP BY sales_manager
             ORDER BY count DESC
             LIMIT 1
