@@ -30,12 +30,17 @@ async function checkAuth() {
             credentials: 'include'
         });
 
-        if (!response.ok) {
+        const data = await response.json();
+
+        // If not authenticated, redirect to login
+        if (!data.authenticated) {
             window.location.href = 'login.html';
+            throw new Error('Not authenticated'); // Stop execution
         }
     } catch (error) {
         console.error('Auth check failed:', error);
         window.location.href = 'login.html';
+        throw error; // Stop execution
     }
 }
 
