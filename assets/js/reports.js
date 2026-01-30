@@ -356,8 +356,9 @@ function formatHour(hour) {
     return `${displayHour}:00 ${period}`;
 }
 
-// Export to CSV
-async function exportToCSV() {
+
+// Export to Excel
+async function exportToExcel() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
 
@@ -371,29 +372,95 @@ async function exportToCSV() {
             fetch(`${API_BASE}/analytics/sales-managers?startDate=${startDate}&endDate=${endDate}`, { credentials: 'include' }).then(r => r.json())
         ]);
 
-        let csv = 'Truck Queue Analytics Report\n';
-        csv += `Period: ${startDate} to ${endDate}\n\n`;
+        // Create a new workbook
+        const wb = XLSX.utils.book_new();
 
-        // Summary
-        csv += 'SUMMARY\n';
-        csv += 'Total Trucks,Avg Loading Time,Busiest Hour,Top Sales Manager\n';
-        csv += `${summary.summary.totalTrucks},${Math.round(summary.summary.avgLoadingTime)},${formatHour(summary.summary.busiestHour || 0)},${summary.summary.topSalesManager}\n\n`;
+        // Summary Sheet
+        const summaryData = [
+            ['Truck Queue Analytics Report'],
+            [`Period: ${startDate} to ${endDate}`],
+            [],
+            ['Summary Statistics'],
+            ['Metric', 'Value'],
+            ['Total Trucks', summary.summary.totalTrucks],
+            ['Avg Loading Time (min)', Math.round(summary.summary.avgLoadingTime)],
+            ['Busiest Hour', formatHour(summary.summary.busiestHour || 0)],
+            ['Top Sales Manager', summary.summary.topSalesManager]
+        ];
+        const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
 
-        // Sales Manager Performance
-        csv += 'SALES MANAGER PERFORMANCE\n';
-        csv += 'Manager,Total Trucks,Avg Total Time,Avg Loading Time,Min Time,Max Time\n';
-        managers.data.forEach(row => {
-            csv += `${row.sales_manager},${row.total_trucks},${Math.round(row.avg_total_time || 0)},${Math.round(row.avg_loading_time || 0)},${Math.round(row.min_total_time || 0)},${Math.round(row.max_total_time || 0)}\n`;
-        });
+        // Completion Stats Sheet
+        if (stats.success && stats.data.length > 0) {
+            const statsData = [
+                ['Daily Completion Statistics'],
+                [],
+                ['Date', 'Total Trucks', 'Avg Total Time (min)', 'Avg Loading Time (min)'],
+                ...stats.data.map(row => [
+                    row.period,
+                    row.total_trucks,
+                    Math.round(row.avg_total_time || 0),
+                    Math.round(row.avg_loading_time || 0)
+                ])
+            ];
+            const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
+            XLSX.utils.book_append_sheet(wb, statsSheet, 'Daily Stats');
+        }
 
-        // Download
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `truck-queue-report-${startDate}-to-${endDate}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        // Warehouse Performance Sheet
+        if (loading.success && loading.data.length > 0) {
+            const warehouseData = [
+                ['Warehouse Performance'],
+                [],
+                ['Warehouse', 'Total Trucks', 'Avg Loading Time (min)', 'Min Time (min)', 'Max Time (min)'],
+                ...loading.data.map(row => [
+                    row.warehouse_name,
+                    row.total_trucks,
+                    Math.round(row.avg_loading_time || 0),
+                    Math.round(row.min_loading_time || 0),
+                    Math.round(row.max_loading_time || 0)
+                ])
+            ];
+            const warehouseSheet = XLSX.utils.aoa_to_sheet(warehouseData);
+            XLSX.utils.book_append_sheet(wb, warehouseSheet, 'Warehouses');
+        }
+
+        // Peak Hours Sheet
+        if (peaks.success && peaks.data.length > 0) {
+            const peaksData = [
+                ['Peak Hours Distribution'],
+                [],
+                ['Hour', 'Truck Count'],
+                ...peaks.data.map(row => [
+                    formatHour(row.hour),
+                    row.truck_count
+                ])
+            ];
+            const peaksSheet = XLSX.utils.aoa_to_sheet(peaksData);
+            XLSX.utils.book_append_sheet(wb, peaksSheet, 'Peak Hours');
+        }
+
+        // Sales Manager Performance Sheet
+        if (managers.success && managers.data.length > 0) {
+            const managersData = [
+                ['Sales Manager Performance'],
+                [],
+                ['Sales Manager', 'Total Trucks', 'Avg Total Time (min)', 'Avg Loading Time (min)', 'Min Time (min)', 'Max Time (min)'],
+                ...managers.data.map(row => [
+                    row.sales_manager,
+                    row.total_trucks,
+                    Math.round(row.avg_total_time || 0),
+                    Math.round(row.avg_loading_time || 0),
+                    Math.round(row.min_total_time || 0),
+                    Math.round(row.max_total_time || 0)
+                ])
+            ];
+            const managersSheet = XLSX.utils.aoa_to_sheet(managersData);
+            XLSX.utils.book_append_sheet(wb, managersSheet, 'Sales Managers');
+        }
+
+        // Download the Excel file
+        XLSX.writeFile(wb, `truck-queue-report-${startDate}-to-${endDate}.xlsx`);
 
     } catch (error) {
         console.error('Export error:', error);
