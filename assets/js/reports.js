@@ -2,6 +2,7 @@ const API_BASE = 'http://localhost:3000/api';
 let charts = {
     completion: null,
     warehouse: null,
+    warehouseCompletion: null,
     peakHours: null
 };
 
@@ -50,6 +51,7 @@ async function loadAllData() {
         loadSummary(startDate, endDate),
         loadCompletionStats(startDate, endDate),
         loadLoadingTime(startDate, endDate),
+        loadWarehouseCompletion(startDate, endDate),
         loadPeakHours(startDate, endDate),
         loadSalesManagerPerformance(startDate, endDate)
     ]);
@@ -251,6 +253,67 @@ async function loadPeakHours(startDate, endDate) {
         }
     } catch (error) {
         console.error('Load peak hours error:', error);
+    }
+}
+
+// Load warehouse completion counts
+async function loadWarehouseCompletion(startDate, endDate) {
+    try {
+        const response = await fetch(`${API_BASE}/analytics/loading-time?startDate=${startDate}&endDate=${endDate}`, {
+            credentials: 'include'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            const ctx = document.getElementById('warehouseCompletionChart');
+
+            if (charts.warehouseCompletion) {
+                charts.warehouseCompletion.destroy();
+            }
+
+            charts.warehouseCompletion = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.data.map(d => d.warehouse_name),
+                    datasets: [{
+                        label: 'Trucks Completed',
+                        data: data.data.map(d => d.total_trucks),
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Load warehouse completion error:', error);
     }
 }
 
