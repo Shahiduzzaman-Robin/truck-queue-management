@@ -10,13 +10,15 @@ let charts = {
 async function init() {
     await checkAuth();
 
-    // Set default date range (last 30 days)
+    // Set default date range (last 30 days to tomorrow)
     const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 1); // Set to tomorrow to include all of today
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
 
-    document.getElementById('endDate').valueAsDate = endDate;
-    document.getElementById('startDate').valueAsDate = startDate;
+    // Use local date strings to avoid timezone issues with valueAsDate
+    document.getElementById('endDate').value = endDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+    document.getElementById('startDate').value = startDate.toLocaleDateString('en-CA');
 
     await loadAllData();
 }
