@@ -231,10 +231,10 @@ exports.getDashboardSummary = async (req, res) => {
         // Top performing sales manager
         const [topManager] = await db.query(`
             SELECT 
-                sales_manager,
+                COALESCE(sales_manager, 'Not Assigned') as sales_manager,
                 COUNT(*) as count
             FROM trucks_history
-            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ? AND sales_manager IS NOT NULL
+            WHERE COALESCE(finished_at, time_of_entry) BETWEEN ? AND ?
             GROUP BY sales_manager
             ORDER BY count DESC
             LIMIT 1
