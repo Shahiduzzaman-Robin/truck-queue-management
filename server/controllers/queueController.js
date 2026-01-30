@@ -77,9 +77,9 @@ const finishTruck = async (req, res) => {
 
         // Move to history
         await connection.query(
-            `INSERT INTO trucks_history (original_serial, licence_number, driver_name, driver_phone, sales_manager, buyer_name, destination, time_of_entry, warehouse_id) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [truck.serial_number, truck.licence_number, truck.driver_name, truck.driver_phone, truck.sales_manager, truck.buyer_name, truck.destination, truck.time_of_entry, warehouseId]
+            `INSERT INTO trucks_history (original_serial, licence_number, driver_name, driver_phone, sales_manager, buyer_name, destination, time_of_entry, time_loading_started, finished_at, warehouse_id) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+            [truck.serial_number, truck.licence_number, truck.driver_name, truck.driver_phone, truck.sales_manager, truck.buyer_name, truck.destination, truck.time_of_entry, truck.time_loading_started, warehouseId]
         );
 
         // Delete from active queue
