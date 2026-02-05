@@ -61,7 +61,8 @@ const addTruck = async (req, res) => {
         logAction(req, 'TRUCK_ADD', result.insertId, {
             serial: nextSerial,
             licence: licence_number,
-            warehouse_id
+            warehouse_id,
+            warehouse_name: warehouseName
         });
 
         res.json({
@@ -104,11 +105,24 @@ const finishTruck = async (req, res) => {
         const truck = trucks[0];
         const warehouseId = truck.warehouse_id;
 
+        // Get next display_serial number (overall)
+        const [maxSerial] = await connection.query(
+            'SELECT COALESCE(MAX(display_serial), 0) + 1 as next_serial FROM trucks_history'
+        );
+        const nextDisplaySerial = maxSerial[0].next_serial;
+
+        // Get next warehouse_serial number (per warehouse)
+        const [maxWarehouseSerial] = await connection.query(
+            'SELECT COALESCE(MAX(warehouse_serial), 0) + 1 as next_serial FROM trucks_history WHERE warehouse_id = ?',
+            [warehouseId]
+        );
+        const nextWarehouseSerial = maxWarehouseSerial[0].next_serial;
+
         // Move to history
         await connection.query(
-            `INSERT INTO trucks_history (original_serial, licence_number, driver_name, driver_phone, sales_manager, buyer_name, destination, time_of_entry, time_loading_started, finished_at, warehouse_id) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
-            [truck.serial_number, truck.licence_number, truck.driver_name, truck.driver_phone, truck.sales_manager, truck.buyer_name, truck.destination, truck.time_of_entry, truck.time_loading_started, warehouseId]
+            `INSERT INTO trucks_history (display_serial, warehouse_serial, original_serial, licence_number, driver_name, driver_phone, sales_manager, buyer_name, destination, time_of_entry, time_loading_started, finished_at, warehouse_id) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+            [nextDisplaySerial, nextWarehouseSerial, truck.id, truck.licence_number, truck.driver_name, truck.driver_phone, truck.sales_manager, truck.buyer_name, truck.destination, truck.time_of_entry, truck.time_loading_started, warehouseId]
         );
 
         // Get warehouse name for Discord notification
@@ -155,7 +169,8 @@ const finishTruck = async (req, res) => {
         // Audit Log
         logAction(req, 'TRUCK_FINISH', truckId, {
             serial: truck.serial_number,
-            licence: truck.licence_number
+            licence: truck.licence_number,
+            warehouse_name: warehouseName
         });
 
         res.json({
@@ -211,19 +226,45 @@ const getActiveQueue = async (req, res) => {
     }
 };
 
-// Get history of completed trucks
+// Get history of completed trucks (warehouse-filtered based on admin role)
 const getHistory = async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 50;
+        const warehouseId = req.session.warehouse_id; // NULL for super_admin, specific ID for regular admin
 
+        // Build query with warehouse filtering
+        // If warehouse_id is NULL (super_admin), show all warehouses
+        // If warehouse_id is set, filter by that warehouse
         const [history] = await db.query(
-            'SELECT * FROM trucks_history ORDER BY completion_time DESC LIMIT ?',
-            [limit]
+            `SELECT 
+                h.id,
+                h.display_serial as serial_number,
+                h.warehouse_serial,
+                h.licence_number,
+                h.driver_name,
+                h.driver_phone,
+                h.sales_manager,
+                h.buyer_name,
+                h.destination,
+                h.time_of_entry,
+                h.time_loading_started,
+                h.finished_at,
+                h.warehouse_id,
+                w.short_name as warehouse_name,
+                TIMESTAMPDIFF(MINUTE, h.time_loading_started, h.finished_at) as loading_duration_minutes,
+                TIMESTAMPDIFF(HOUR, h.time_of_entry, h.finished_at) as total_duration_hours
+            FROM trucks_history h
+            LEFT JOIN warehouses w ON h.warehouse_id = w.id
+            WHERE (? IS NULL OR h.warehouse_id = ?)
+            ORDER BY h.display_serial DESC
+            LIMIT ?`,
+            [warehouseId, warehouseId, limit]
         );
 
         res.json({
             success: true,
-            history: history
+            history: history,
+            warehouse_filter: warehouseId ? 'specific' : 'all'
         });
 
     } catch (error) {
@@ -259,6 +300,13 @@ const updateTruck = async (req, res) => {
         const truckId = req.params.id;
         const { licence_number, driver_name, driver_phone, sales_manager, buyer_name, destination } = req.body;
 
+        // Get truck and warehouse info for logging
+        const [truckInfo] = await db.query(
+            'SELECT w.name as warehouse_name FROM trucks t JOIN warehouses w ON t.warehouse_id = w.id WHERE t.id = ?',
+            [truckId]
+        );
+        const warehouseName = truckInfo[0]?.warehouse_name || 'Unknown';
+
         // Perform update
         const [result] = await db.query(
             'UPDATE trucks SET licence_number = ?, driver_name = ?, driver_phone = ?, sales_manager = ?, buyer_name = ?, destination = ? WHERE id = ?',
@@ -279,7 +327,8 @@ const updateTruck = async (req, res) => {
 
         // Audit Log
         logAction(req, 'TRUCK_UPDATE', truckId, {
-            changes: req.body
+            changes: req.body,
+            warehouse_name: warehouseName
         });
 
     } catch (error) {
@@ -318,6 +367,13 @@ const deleteTruck = async (req, res) => {
         // Delete truck
         await connection.query('DELETE FROM trucks WHERE id = ?', [truckId]);
 
+        // Get warehouse name for logging
+        const [warehouseRows] = await connection.query(
+            'SELECT name FROM warehouses WHERE id = ?',
+            [warehouseId]
+        );
+        const warehouseName = warehouseRows[0]?.name || 'Unknown';
+
         // Reorder remaining trucks in THIS warehouse (decrement all serial numbers > deleted serial)
         await connection.query(
             'UPDATE trucks SET serial_number = serial_number - 1 WHERE serial_number > ? AND warehouse_id = ?',
@@ -351,7 +407,8 @@ const deleteTruck = async (req, res) => {
         logAction(req, 'TRUCK_DELETE', truckId, {
             serial: truck.serial_number,
             licence: truck.licence_number,
-            reason: 'Manual deletion'
+            reason: 'Manual deletion',
+            warehouse_name: warehouseName
         });
 
     } catch (error) {

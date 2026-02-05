@@ -725,10 +725,114 @@ document.getElementById('editTruckForm').addEventListener('submit', async (e) =>
         console.error('Update error:', error);
         messageBox.innerHTML = '<div class="alert alert-error">❌ Failed to update truck.</div>';
     }
-});
+})
+
+    ;
+
+// Load Finished Trucks History
+async function loadHistory() {
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/trucks/history?limit=50`, {
+            credentials: 'include'
+        });
+        const data = await response.json();
+
+        if (data.success && data.history.length > 0) {
+            tbody.innerHTML = data.history.map(truck => {
+                const entryTime = new Date(truck.time_of_entry).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const finishTime = new Date(truck.finished_at).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Format duration
+                let durationText = '-';
+                if (truck.loading_duration_minutes) {
+                    const totalHours = Math.floor(truck.loading_duration_minutes / 60);
+                    const mins = truck.loading_duration_minutes % 60;
+
+                    if (totalHours >= 24) {
+                        // Show days, hours, minutes for large durations
+                        const days = Math.floor(totalHours / 24);
+                        const hours = totalHours % 24;
+                        durationText = `${days}d ${hours}h ${mins}m`;
+                    } else if (totalHours > 0) {
+                        // Show hours and minutes
+                        durationText = `${totalHours}h ${mins}m`;
+                    } else {
+                        // Show only minutes
+                        durationText = `${mins}m`;
+                    }
+                }
+
+                return `
+                    <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 12px; font-weight: 600; color: #2563eb;">#${truck.serial_number}</td>
+                        <td style="padding: 12px;">
+                            <span style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px; font-size: 0.9rem;">
+                                ${truck.warehouse_name || 'N/A'} #${truck.warehouse_serial}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; font-weight: 500;">${truck.licence_number}</td>
+                        <td style="padding: 12px;">${truck.driver_name}</td>
+                        <td style="padding: 12px; font-size: 0.9rem; color: #666;">${truck.driver_phone}</td>
+                        <td style="padding: 12px;">${truck.buyer_name}</td>
+                        <td style="padding: 12px; font-size: 0.9rem;">${truck.destination}</td>
+                        <td style="padding: 12px;">
+                            <span style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">
+                                ${truck.warehouse_name || 'N/A'}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; font-size: 0.9rem; color: #666;">${entryTime}</td>
+                        <td style="padding: 12px; font-size: 0.9rem; color: #666;">${finishTime}</td>
+                        <td style="padding: 12px;">
+                            <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                ${durationText}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="padding: 40px; text-align: center; color: #999;">
+                        No finished trucks found
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" style="padding: 40px; text-align: center; color: #d32f2f;">
+                    ❌ Failed to load history
+                </td>
+            </tr>
+        `;
+    }
+}
 
 // Refresh button
 document.getElementById('refreshBtn').addEventListener('click', loadQueue);
+
+// Refresh history button
+const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+if (refreshHistoryBtn) {
+    refreshHistoryBtn.addEventListener('click', loadHistory);
+}
 
 // Initialize
 async function init() {
@@ -736,6 +840,7 @@ async function init() {
     await syncServerTime();
     if (currentWarehouseId) {
         await loadQueue();
+        await loadHistory(); // Load finished trucks history
     }
 
     // Update timers every second
@@ -743,6 +848,9 @@ async function init() {
 
     // Auto-refresh queue every 30 seconds
     setInterval(loadQueue, 30000);
+
+    // Auto-refresh history every 60 seconds
+    setInterval(loadHistory, 60000);
 
     // Initialize custom dropdowns globally
     initCustomDropdowns();

@@ -450,6 +450,46 @@
                 <p style="text-align: center; color: #666;">Loading queue...</p>
             </div>
         </div>
+
+        <!-- Finished Trucks History -->
+        <div class="card">
+            <div class="card-header"
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: none; padding-bottom: 0; margin-bottom: 20px;">
+                <h2>✅ Finished Trucks</h2>
+                <button id="refreshHistoryBtn" class="btn btn-secondary">🔄 Refresh</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 1000px;">
+                    <thead>
+                        <tr style="background: #f5f5f5; text-align: left;">
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Overall #
+                            </th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Warehouse #
+                            </th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">License</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Driver</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Phone</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Buyer</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Destination
+                            </th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Warehouse
+                            </th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Entry Time
+                            </th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Finished At
+                            </th>
+                            <th style="padding: 12px; border-bottom: 2px solid #e5e5e5; font-weight: 600;">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="10" style="padding: 40px; text-align: center; color: #666;">Loading history...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
     <!-- Manage Admins Section (Super Admin Only) -->
     <div id="manageAdminsSection" class="card" style="display: none;">
