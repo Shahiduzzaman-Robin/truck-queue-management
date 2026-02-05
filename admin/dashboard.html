@@ -454,11 +454,16 @@
         <!-- Finished Trucks History -->
         <div class="card">
             <div class="card-header"
-                style="display: flex; justify-content: space-between; align-items: center; border-bottom: none; padding-bottom: 0; margin-bottom: 20px;">
-                <h2>✅ Finished Trucks</h2>
-                <button id="refreshHistoryBtn" class="btn btn-secondary">🔄 Refresh</button>
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: none; padding-bottom: 0; margin-bottom: 20px; cursor: pointer;"
+                id="finishedTrucksHeader">
+                <h2 style="display: flex; align-items: center; gap: 10px;">
+                    <span id="finishedTrucksToggle">▼</span>
+                    ✅ Finished Trucks
+                </h2>
+                <button id="refreshHistoryBtn" class="btn btn-secondary" onclick="event.stopPropagation()">🔄
+                    Refresh</button>
             </div>
-            <div style="overflow-x: auto;">
+            <div id="finishedTrucksContent" style="overflow-x: auto;">
                 <table style="width: 100%; border-collapse: collapse; min-width: 1000px;">
                     <thead>
                         <tr style="background: #f5f5f5; text-align: left;">
@@ -483,7 +488,7 @@
                     </thead>
                     <tbody id="historyTableBody">
                         <tr>
-                            <td colspan="10" style="padding: 40px; text-align: center; color: #666;">Loading history...
+                            <td colspan="11" style="padding: 40px; text-align: center; color: #666;">Loading history...
                             </td>
                         </tr>
                     </tbody>

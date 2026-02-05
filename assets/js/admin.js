@@ -834,6 +834,29 @@ if (refreshHistoryBtn) {
     refreshHistoryBtn.addEventListener('click', loadHistory);
 }
 
+// Toggle Finished Trucks section
+const finishedTrucksHeader = document.getElementById('finishedTrucksHeader');
+const finishedTrucksContent = document.getElementById('finishedTrucksContent');
+const finishedTrucksToggle = document.getElementById('finishedTrucksToggle');
+
+if (finishedTrucksHeader && finishedTrucksContent && finishedTrucksToggle) {
+    // Start collapsed
+    finishedTrucksContent.style.display = 'none';
+    finishedTrucksToggle.textContent = '▶';
+
+    finishedTrucksHeader.addEventListener('click', () => {
+        const isCollapsed = finishedTrucksContent.style.display === 'none';
+
+        if (isCollapsed) {
+            finishedTrucksContent.style.display = 'block';
+            finishedTrucksToggle.textContent = '▼';
+        } else {
+            finishedTrucksContent.style.display = 'none';
+            finishedTrucksToggle.textContent = '▶';
+        }
+    });
+}
+
 // Initialize
 async function init() {
     await checkAuth();
