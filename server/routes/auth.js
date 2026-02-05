@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const db = require('../config/db');
+const { logAction } = require('../services/auditLogger');
 
 // Login
 router.post('/login', async (req, res) => {
@@ -19,6 +20,9 @@ router.post('/login', async (req, res) => {
         const [users] = await db.query('SELECT * FROM admin_users WHERE username = ?', [username]);
 
         if (users.length === 0) {
+            // Log failed login
+            logAction(req, 'LOGIN_FAILED', username, { reason: 'User not found' });
+
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
@@ -31,6 +35,9 @@ router.post('/login', async (req, res) => {
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
         if (!isValidPassword) {
+            // Log failed login
+            logAction(req, 'LOGIN_FAILED', username, { reason: 'Invalid password' });
+
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials'
@@ -51,6 +58,9 @@ router.post('/login', async (req, res) => {
             warehouse_id: user.warehouse_id
         });
 
+        // Log successful login
+        logAction(req, 'LOGIN_SUCCESS', user.id, { role: user.role });
+
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({
@@ -63,6 +73,11 @@ router.post('/login', async (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
+    // Log logout action before destroying session
+    if (req.session && req.session.userId) {
+        logAction(req, 'LOGOUT', req.session.userId, {});
+    }
+
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({

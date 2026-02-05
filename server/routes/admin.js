@@ -11,5 +11,6 @@ router.get('/', adminController.getAllAdmins);
 router.post('/', adminController.createAdmin);
 router.put('/:id', adminController.updateAdmin);
 router.delete('/:id', adminController.deleteAdmin);
+router.get('/logs', adminController.getAuditLogs);
 
 module.exports = router;

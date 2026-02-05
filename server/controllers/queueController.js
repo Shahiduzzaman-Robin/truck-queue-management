@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const { sendNewTruckNotification, sendCompletedTruckNotification } = require('../services/discordNotifier');
+const { logAction } = require('../services/auditLogger');
 
 // Add new truck to queue
 const addTruck = async (req, res) => {
@@ -34,6 +36,33 @@ const addTruck = async (req, res) => {
                 ['loading', warehouse_id]
             );
         }
+
+        // Get warehouse name for Discord notification
+        const [warehouseRows] = await db.query(
+            'SELECT name FROM warehouses WHERE id = ?',
+            [warehouse_id]
+        );
+        const warehouseName = warehouseRows[0]?.name || 'Unknown';
+
+        // Send Discord notification (non-blocking)
+        const truckData = {
+            serial_number: `TRK-${String(nextSerial).padStart(3, '0')}`,
+            driver_name,
+            phone_number: driver_phone,
+            warehouse_name: warehouseName,
+            sales_manager: req.body.sales_manager || 'Not Assigned',
+            time_of_entry: new Date()
+        };
+        sendNewTruckNotification(truckData).catch(err =>
+            console.error('Discord notification failed:', err)
+        );
+
+        // Audit Log
+        logAction(req, 'TRUCK_ADD', result.insertId, {
+            serial: nextSerial,
+            licence: licence_number,
+            warehouse_id
+        });
 
         res.json({
             success: true,
@@ -82,6 +111,25 @@ const finishTruck = async (req, res) => {
             [truck.serial_number, truck.licence_number, truck.driver_name, truck.driver_phone, truck.sales_manager, truck.buyer_name, truck.destination, truck.time_of_entry, truck.time_loading_started, warehouseId]
         );
 
+        // Get warehouse name for Discord notification
+        const [warehouseRows] = await connection.query(
+            'SELECT name FROM warehouses WHERE id = ?',
+            [warehouseId]
+        );
+        const warehouseName = warehouseRows[0]?.name || 'Unknown';
+
+        // Prepare data for Discord notification
+        const completedTruckData = {
+            serial_number: `TRK-${String(truck.serial_number).padStart(3, '0')}`,
+            driver_name: truck.driver_name,
+            phone_number: truck.driver_phone,
+            warehouse_name: warehouseName,
+            sales_manager: truck.sales_manager || 'Not Assigned',
+            destination: truck.destination || 'Not Specified',
+            time_of_entry: truck.time_of_entry,
+            finished_at: new Date()
+        };
+
         // Delete from active queue
         await connection.query('DELETE FROM trucks WHERE id = ?', [truckId]);
 
@@ -98,6 +146,17 @@ const finishTruck = async (req, res) => {
         );
 
         await connection.commit();
+
+        // Send Discord notification after successful commit (non-blocking)
+        sendCompletedTruckNotification(completedTruckData).catch(err =>
+            console.error('Discord notification failed:', err)
+        );
+
+        // Audit Log
+        logAction(req, 'TRUCK_FINISH', truckId, {
+            serial: truck.serial_number,
+            licence: truck.licence_number
+        });
 
         res.json({
             success: true,
@@ -218,6 +277,11 @@ const updateTruck = async (req, res) => {
             message: 'Truck info updated successfully'
         });
 
+        // Audit Log
+        logAction(req, 'TRUCK_UPDATE', truckId, {
+            changes: req.body
+        });
+
     } catch (error) {
         console.error('Error updating truck:', error);
         res.status(500).json({
@@ -281,6 +345,13 @@ const deleteTruck = async (req, res) => {
         res.json({
             success: true,
             message: 'Truck deleted and serials reordered'
+        });
+
+        // Audit Log
+        logAction(req, 'TRUCK_DELETE', truckId, {
+            serial: truck.serial_number,
+            licence: truck.licence_number,
+            reason: 'Manual deletion'
         });
 
     } catch (error) {

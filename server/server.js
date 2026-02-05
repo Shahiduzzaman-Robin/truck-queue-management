@@ -1,12 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
-require('dotenv').config();
+const path = require('path');
+// Load config from config.env (non-hidden file)
+require('dotenv').config({ path: path.join(__dirname, '../config.env') });
 
 // Set timezone to Bangladesh Time (BDT / Asia/Dhaka / GMT+6)
 process.env.TZ = 'Asia/Dhaka';
 
-const path = require('path');
 const sessionConfig = require('./config/session');
 const authRoutes = require('./routes/auth');
 const truckRoutes = require('./routes/trucks');

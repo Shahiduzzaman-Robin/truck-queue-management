@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
+const { logAction } = require('../services/auditLogger');
 
 // Get all admin users
 exports.getAllAdmins = async (req, res) => {
@@ -66,6 +67,9 @@ exports.createAdmin = async (req, res) => {
             success: true,
             message: 'Admin created successfully'
         });
+
+        // Audit Log
+        logAction(req, 'ADMIN_CREATE', username, { role: finalRole, warehouse_id: finalWarehouseId });
 
     } catch (error) {
         console.error('Create admin error:', error);
@@ -136,6 +140,9 @@ exports.updateAdmin = async (req, res) => {
             message: 'Admin updated successfully'
         });
 
+        // Audit Log
+        logAction(req, 'ADMIN_UPDATE', adminId, { updates: updates });
+
     } catch (error) {
         console.error('Update admin error:', error);
         res.status(500).json({
@@ -164,11 +171,61 @@ exports.deleteAdmin = async (req, res) => {
             success: true,
             message: 'Admin deleted successfully'
         });
+
+        // Audit Log
+        logAction(req, 'ADMIN_DELETE', adminId, {});
     } catch (error) {
         console.error('Delete admin error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to delete admin'
+        });
+    }
+};
+
+// Get audit logs
+exports.getAuditLogs = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 100;
+        const { username, startDate, endDate } = req.query;
+
+        let query = 'SELECT * FROM audit_logs';
+        const params = [];
+        const conditions = [];
+
+        if (username) {
+            conditions.push('username = ?');
+            params.push(username);
+        }
+
+        if (startDate) {
+            conditions.push('created_at >= ?');
+            params.push(`${startDate} 00:00:00`);
+        }
+
+        if (endDate) {
+            conditions.push('created_at <= ?');
+            params.push(`${endDate} 23:59:59`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY created_at DESC LIMIT ?';
+        params.push(limit);
+
+        const [logs] = await db.query(query, params);
+
+        res.json({
+            success: true,
+            logs
+        });
+    } catch (error) {
+        console.error('Get audit logs error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve audit logs'
         });
     }
 };

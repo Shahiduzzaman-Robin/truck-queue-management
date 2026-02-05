@@ -36,6 +36,12 @@ async function checkAuth() {
                 loadAdmins();
             }
 
+            // Show Audit Logs Button
+            const auditLogsBtn = document.getElementById('auditLogsBtn');
+            if (auditLogsBtn) {
+                auditLogsBtn.style.display = 'inline-block';
+            }
+
             // Default to first warehouse
             const selector = document.getElementById('warehouseSelector');
             if (selector.options.length > 1) {
