@@ -62,10 +62,19 @@ app.use((req, res) => {
     });
 });
 
+// Create HTTP server
+const http = require('http');
+const server = http.createServer(app);
+
+// Initialize WebSocket service
+const websocketService = require('./services/websocketService');
+websocketService.initialize(server);
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log('🚀 Truck Queue Management Server');
     console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log(`WebSocket server ready for connections`);
     console.log(`📊 API available at http://localhost:${PORT}/api`);
     console.log(`🔐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

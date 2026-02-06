@@ -3,14 +3,40 @@ const db = require('../config/db');
 // Get all active warehouses (public access)
 const getAllWarehouses = async (req, res) => {
     try {
+        // 1. Get warehouses
         const [warehouses] = await db.query(
             'SELECT id, name, short_name, status FROM warehouses WHERE status = ?',
             ['active']
         );
 
+        // 2. Get active truck counts for each warehouse
+        // We want to count 'waiting' (serial > 1) and 'loading' (serial = 1)
+        // Grouped by warehouse_id
+        const [stats] = await db.query(`
+            SELECT 
+                warehouse_id,
+                SUM(CASE WHEN serial_number = 1 THEN 1 ELSE 0 END) as loading,
+                SUM(CASE WHEN serial_number > 1 THEN 1 ELSE 0 END) as waiting
+            FROM trucks 
+            WHERE status != 'completed' 
+            GROUP BY warehouse_id
+        `);
+
+        // 3. Map stats to warehouses
+        const warehousesWithStats = warehouses.map(wh => {
+            const whStats = stats.find(s => s.warehouse_id === wh.id) || { loading: 0, waiting: 0 };
+            return {
+                ...wh,
+                stats: {
+                    loading: parseInt(whStats.loading) || 0,
+                    waiting: parseInt(whStats.waiting) || 0
+                }
+            };
+        });
+
         res.json({
             success: true,
-            warehouses
+            warehouses: warehousesWithStats
         });
     } catch (error) {
         console.error('Error fetching warehouses:', error);

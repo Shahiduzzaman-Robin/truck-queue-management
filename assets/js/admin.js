@@ -5,6 +5,89 @@ let currentTrucks = [];
 let currentUser = null;
 let currentWarehouseId = null;
 
+// WebSocket connection
+let ws = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT_ATTEMPTS = 5;
+const WS_RECONNECT_DELAY = 3000;
+
+// Initialize WebSocket connection
+function initWebSocket() {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:${window.location.port || 3000}`;
+
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+        console.log('WebSocket connected');
+        wsReconnectAttempts = 0;
+
+        // Authenticate with warehouse ID
+        if (currentWarehouseId) {
+            ws.send(JSON.stringify({
+                type: 'auth',
+                warehouseId: currentWarehouseId,
+                userId: currentUser?.id
+            }));
+        }
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            handleWebSocketMessage(message);
+        } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket disconnected');
+
+        // Attempt to reconnect
+        if (wsReconnectAttempts < WS_MAX_RECONNECT_ATTEMPTS) {
+            wsReconnectAttempts++;
+            console.log(`Reconnecting... (attempt ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})`);
+            setTimeout(initWebSocket, WS_RECONNECT_DELAY);
+        } else {
+            console.log('Max reconnection attempts reached. Falling back to polling.');
+        }
+    };
+}
+
+// Handle WebSocket messages
+function handleWebSocketMessage(message) {
+    const { type, data } = message;
+
+    switch (type) {
+        case 'connection:established':
+            console.log('WebSocket connection established');
+            break;
+
+        case 'truck:added':
+        case 'truck:updated':
+        case 'truck:deleted':
+        case 'truck:finished':
+            // Reload queue when any truck event occurs
+            loadQueue();
+            loadHistory();
+            break;
+
+        case 'queue:updated':
+            // Reload queue
+            loadQueue();
+            break;
+
+        default:
+            console.log('Unknown WebSocket message type:', type);
+    }
+}
+
+
 // Check authentication on page load
 async function checkAuth() {
     try {
@@ -864,16 +947,20 @@ async function init() {
     if (currentWarehouseId) {
         await loadQueue();
         await loadHistory(); // Load finished trucks history
+
+        // Initialize WebSocket for real-time updates
+        initWebSocket();
     }
 
     // Update timers every second
     setInterval(updateTimers, 1000);
 
-    // Auto-refresh queue every 30 seconds
-    setInterval(loadQueue, 30000);
+    // Reduced polling as fallback (WebSocket provides instant updates)
+    // Auto-refresh queue every 5 minutes (was 30 seconds)
+    setInterval(loadQueue, 300000);
 
-    // Auto-refresh history every 60 seconds
-    setInterval(loadHistory, 60000);
+    // Auto-refresh history every 10 minutes (was 60 seconds)
+    setInterval(loadHistory, 600000);
 
     // Initialize custom dropdowns globally
     initCustomDropdowns();

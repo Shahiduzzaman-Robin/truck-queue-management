@@ -1,6 +1,8 @@
 const db = require('../config/db');
 const { sendNewTruckNotification, sendCompletedTruckNotification } = require('../services/discordNotifier');
 const { logAction } = require('../services/auditLogger');
+const websocketService = require('../services/websocketService');
+
 
 // Add new truck to queue
 const addTruck = async (req, res) => {
@@ -63,6 +65,20 @@ const addTruck = async (req, res) => {
             licence: licence_number,
             warehouse_id,
             warehouse_name: warehouseName
+        });
+
+        // Emit WebSocket event for real-time updates
+        websocketService.emitTruckAdded(warehouse_id, {
+            id: result.insertId,
+            serial_number: nextSerial,
+            licence_number,
+            driver_name,
+            driver_phone,
+            buyer_name,
+            destination,
+            warehouse_id,
+            warehouse_name: warehouseName,
+            status: nextSerial === 1 ? 'loading' : 'waiting'
         });
 
         res.json({
@@ -170,6 +186,15 @@ const finishTruck = async (req, res) => {
         logAction(req, 'TRUCK_FINISH', truckId, {
             serial: truck.serial_number,
             licence: truck.licence_number,
+            warehouse_name: warehouseName
+        });
+
+        // Emit WebSocket event for real-time updates
+        websocketService.emitTruckFinished(warehouseId, {
+            id: truckId,
+            serial_number: truck.serial_number,
+            licence_number: truck.licence_number,
+            warehouse_id: warehouseId,
             warehouse_name: warehouseName
         });
 
@@ -410,6 +435,9 @@ const deleteTruck = async (req, res) => {
             reason: 'Manual deletion',
             warehouse_name: warehouseName
         });
+
+        // Emit WebSocket event for real-time updates
+        websocketService.emitTruckDeleted(warehouseId, truckId);
 
     } catch (error) {
         await connection.rollback();

@@ -236,13 +236,14 @@
                             <th style="width: 180px;">Time</th>
                             <th style="width: 150px;">User</th>
                             <th style="width: 150px;">Action</th>
+                            <th style="width: 150px;">Warehouse</th>
                             <th style="width: 100px;">Target ID</th>
                             <th>Details</th>
                         </tr>
                     </thead>
                     <tbody id="logsTableBody">
                         <tr>
-                            <td colspan="5" style="text-align: center; color: #999;">Loading logs...</td>
+                            <td colspan="6" style="text-align: center; color: #999;">Loading logs...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -271,9 +272,24 @@
             }
         }
 
+        let warehousesMap = {};
+        async function loadWarehouses() {
+            try {
+                const response = await fetch('/api/warehouses');
+                const data = await response.json();
+                if (data.success) {
+                    data.warehouses.forEach(w => {
+                        warehousesMap[w.id] = w.name;
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load warehouses:', error);
+            }
+        }
+
         async function loadLogs() {
             const tbody = document.getElementById('logsTableBody');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">Loading...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">Loading...</td></tr>';
 
             const username = document.getElementById('userFilter').value;
             const startDate = document.getElementById('startDate').value;
@@ -291,18 +307,18 @@
                 if (data.success) {
                     renderLogs(data.logs);
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">${data.message || 'Error loading logs'}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">${data.message || 'Error loading logs'}</td></tr>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Failed to connect to server</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Failed to connect to server</td></tr>`;
             }
         }
 
         function renderLogs(logs) {
             const tbody = document.getElementById('logsTableBody');
             if (logs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No logs found matching filters</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No logs found matching filters</td></tr>';
                 return;
             }
 
@@ -317,6 +333,22 @@
 
                 const details = typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2);
 
+                // Parse details if it's a string to access properties
+                let detailsObj = {};
+                try {
+                    detailsObj = typeof log.details === 'string' ? JSON.parse(log.details) : (log.details || {});
+                } catch (e) {
+                    detailsObj = {};
+                }
+
+                // Try to find warehouse name in details or map from ID
+                let warehouseName = '-';
+                if (detailsObj.warehouse_name) {
+                    warehouseName = detailsObj.warehouse_name;
+                } else if (detailsObj.warehouse_id && warehousesMap[detailsObj.warehouse_id]) {
+                    warehouseName = warehousesMap[detailsObj.warehouse_id];
+                }
+
                 return `
                     <tr>
                         <td>${date}</td>
@@ -325,6 +357,7 @@
                             ${log.user_id ? `<div class="meta">ID: ${log.user_id}</div>` : ''}
                         </td>
                         <td><span class="badge ${badgeClass}">${log.action}</span></td>
+                        <td>${warehouseName}</td>
                         <td>${log.target_id || '-'}</td>
                         <td>
                             ${details !== '{}' ? `<pre>${details}</pre>` : '<span style="color:#ccc">No details</span>'}
@@ -344,7 +377,7 @@
 
         // Initialize
         loadUsers();
-        loadLogs();
+        loadWarehouses().then(loadLogs);
     </script>
 </body>
 
