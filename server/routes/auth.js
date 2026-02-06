@@ -53,6 +53,7 @@ router.post('/login', async (req, res) => {
         res.json({
             success: true,
             message: 'Login successful',
+            id: user.id,
             username: user.username,
             role: user.role,
             warehouse_id: user.warehouse_id
@@ -98,6 +99,7 @@ router.get('/check', (req, res) => {
         res.json({
             success: true,
             authenticated: true,
+            id: req.session.userId,
             username: req.session.username,
             role: req.session.role,
             warehouse_id: req.session.warehouse_id

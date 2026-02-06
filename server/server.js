@@ -34,6 +34,7 @@ app.use('/api/trucks', truckRoutes);
 app.use('/api/warehouses', require('./routes/warehouses'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/messages', require('./routes/messages'));
 
 // Health check
 app.get('/api/health', (req, res) => {

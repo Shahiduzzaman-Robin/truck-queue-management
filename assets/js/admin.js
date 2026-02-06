@@ -82,6 +82,12 @@ function handleWebSocketMessage(message) {
             loadQueue();
             break;
 
+        case 'message:received':
+            // If chat modal is open and chatting with sender, append message
+            // Else show notification badge
+            handleIncomingMessage(data);
+            break;
+
         default:
             console.log('Unknown WebSocket message type:', type);
     }
@@ -941,6 +947,252 @@ if (finishedTrucksHeader && finishedTrucksContent && finishedTrucksToggle) {
 }
 
 // Initialize
+// --- Chat System Logic ---
+
+let currentChatUserId = null;
+let chatCheckInterval = null;
+const unreadMessages = new Set(); // Store sender IDs with unread messages
+
+async function openChatModal() {
+    document.getElementById('chatModal').style.display = 'flex';
+    document.getElementById('messagesBtn').classList.remove('has-unread'); // Remove badge style if any
+    await loadChatUsers();
+}
+
+function closeChatModal() {
+    document.getElementById('chatModal').style.display = 'none';
+    currentChatUserId = null;
+    if (chatCheckInterval) clearInterval(chatCheckInterval);
+}
+
+// Load list of admins for chat
+async function loadChatUsers() {
+    const listContainer = document.getElementById('chatUserList');
+    try {
+        const response = await fetch(`${API_BASE}/messages/users`, { credentials: 'include' });
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.users.length === 0) {
+                listContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#999;">No other admins found.</div>';
+                return;
+            }
+
+            listContainer.innerHTML = data.users.map(user => `
+                <div class="chat-user-item ${currentChatUserId == user.id ? 'active' : ''}" 
+                     onclick="startChat(${user.id}, '${user.username}')" 
+                     data-user-id="${user.id}">
+                    <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:500; font-size:0.95rem;">
+                            ${user.username}
+                            ${unreadMessages.has(user.id) ? '<span style="background:red; width:8px; height:8px; border-radius:50%; display:inline-block; margin-left:5px;"></span>' : ''}
+                        </div>
+                        <div style="font-size:0.8rem; color:#666;">${user.role === 'super_admin' ? 'Super Admin' : 'Warehouse Admin'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading chat users:', error);
+        listContainer.innerHTML = '<div style="color:red; padding:20px;">Failed to load users</div>';
+    }
+}
+
+// Start chat with a user
+async function startChat(userId, username) {
+    currentChatUserId = userId;
+
+    // Update active state in list
+    document.querySelectorAll('.chat-user-item').forEach(item => item.classList.remove('active'));
+    document.querySelector(`.chat-user-item[data-user-id="${userId}"]`)?.classList.add('active');
+
+    // Remove unread status locally and on server
+    unreadMessages.delete(userId);
+    updateUnreadBadge();
+    loadChatUsers(); // Refresh list to remove red dot
+    await markAsRead(userId); // Mark as read on server
+
+    // Update Header
+    document.getElementById('chatHeader').style.display = 'block';
+    document.getElementById('chatWithUser').textContent = `Chat with ${username}`;
+    document.getElementById('chatInputArea').style.display = 'flex';
+
+    // Load History
+    await loadChatHistory(userId);
+
+    // focus input
+    document.getElementById('messageInput').focus();
+}
+
+// Load chat history
+async function loadChatHistory(userId) {
+    const messagesContainer = document.getElementById('chatMessages');
+    messagesContainer.innerHTML = '<div style="text-align:center; padding:20px;">Loading...</div>';
+
+    try {
+        const response = await fetch(`${API_BASE}/messages/history/${userId}`, { credentials: 'include' });
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.messages.length === 0) {
+                messagesContainer.innerHTML = '<div class="chat-empty-state"><div>No messages yet.</div><div style="font-size:0.9rem; margin-top:5px;">Say hello! 👋</div></div>';
+            } else {
+                messagesContainer.innerHTML = data.messages.map(msg => renderMessage(msg)).join('');
+                scrollToBottom();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        messagesContainer.innerHTML = '<div style="color:red; text-align:center;">Failed to load messages</div>';
+    }
+}
+
+function renderMessage(msg) {
+    const isSent = msg.sender_id == currentUser.id;
+    const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    return `
+        <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
+            <div>${escapeHtml(msg.message)}</div>
+            <div class="message-time">${time}</div>
+        </div>
+    `;
+}
+
+function scrollToBottom() {
+    const container = document.getElementById('chatMessages');
+    container.scrollTop = container.scrollHeight;
+}
+
+// Send Message
+document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
+document.getElementById('messageInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
+
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+
+    if (!message || !currentChatUserId) return;
+
+    // Optimistic UI update (optional, but good for UX)
+    // We'll wait for server response to be safe for now, or just append it.
+
+    try {
+        const response = await fetch(`${API_BASE}/messages/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                receiverId: currentChatUserId,
+                message: message
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            input.value = '';
+            // Append message if looking at this chat
+            const messagesContainer = document.getElementById('chatMessages');
+            // Check if empty state exists
+            if (messagesContainer.querySelector('.chat-empty-state')) {
+                messagesContainer.innerHTML = '';
+            }
+            messagesContainer.insertAdjacentHTML('beforeend', renderMessage(data.message));
+            scrollToBottom();
+        }
+    } catch (error) {
+        console.error('Send message error:', error);
+        alert('Failed to send message');
+    }
+}
+
+// Mark messages as read
+async function markAsRead(senderId) {
+    if (!senderId) return;
+    try {
+        await fetch(`${API_BASE}/messages/read/${senderId}`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        // Remove from unread set
+        if (unreadMessages.has(senderId)) {
+            unreadMessages.delete(senderId);
+            updateUnreadBadge();
+        }
+    } catch (error) {
+        console.error('Error marking as read:', error);
+    }
+}
+
+// Fetch unread counts on load
+async function fetchUnreadCounts() {
+    try {
+        const response = await fetch(`${API_BASE}/messages/unread`, { credentials: 'include' });
+        const data = await response.json();
+
+        if (data.success) {
+            unreadMessages.clear();
+            data.counts.forEach(item => {
+                unreadMessages.add(item.sender_id);
+            });
+            updateUnreadBadge();
+        }
+    } catch (error) {
+        console.error('Error fetching unread counts:', error);
+    }
+}
+
+// Handle incoming realtime message
+function handleIncomingMessage(msg) {
+    // 1. If chat is open and we are talking to the sender, append message AND mark as read
+    if (document.getElementById('chatModal').style.display !== 'none' && currentChatUserId == msg.sender_id) {
+        const messagesContainer = document.getElementById('chatMessages');
+        if (messagesContainer.querySelector('.chat-empty-state')) {
+            messagesContainer.innerHTML = '';
+        }
+        messagesContainer.insertAdjacentHTML('beforeend', renderMessage(msg));
+        scrollToBottom();
+
+        // Mark as read immediately since user is looking at it
+        markAsRead(msg.sender_id);
+
+    } else {
+        // 2. Else mark as unread and update badge
+        unreadMessages.add(msg.sender_id);
+        updateUnreadBadge();
+
+        // If list is open, refresh it to show dot
+        if (document.getElementById('chatModal').style.display !== 'none') {
+            loadChatUsers();
+        }
+
+        // Play notification sound (optional)
+        // const audio = new Audio('../assets/sounds/notification.mp3');
+        // audio.play().catch(e => {}); 
+    }
+}
+
+function updateUnreadBadge() {
+    const badge = document.getElementById('unreadBadge');
+    if (unreadMessages.size > 0) {
+        badge.textContent = unreadMessages.size;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// Utility
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 async function init() {
     await checkAuth();
     await syncServerTime();
@@ -950,6 +1202,9 @@ async function init() {
 
         // Initialize WebSocket for real-time updates
         initWebSocket();
+
+        // Fetch unread messages
+        fetchUnreadCounts();
     }
 
     // Update timers every second

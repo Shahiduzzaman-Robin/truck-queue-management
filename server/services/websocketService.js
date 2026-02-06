@@ -129,6 +129,19 @@ class WebSocketService {
         });
     }
 
+    // Send specific message to a user (by userId) - for chat
+    sendToUser(userId, event) {
+        this.clients.forEach((client) => {
+            // Check if client is authenticated and userId matches
+            // Note: userId coming from database is usually number, from client msg might be string/number
+            if (client.userId && String(client.userId) === String(userId)) {
+                if (client.ws.readyState === WebSocket.OPEN) {
+                    client.ws.send(JSON.stringify(event));
+                }
+            }
+        });
+    }
+
     emitQueueUpdated(warehouseId) {
         this.broadcast({
             type: 'queue:updated',
